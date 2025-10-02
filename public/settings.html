@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدارة السعات</title>
+    <style>
+        body { font-family: Tahoma, Arial, sans-serif; padding: 20px; background-color: #f4f7f6; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        h1 { color: #007bff; border-bottom: 2px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+        .setting-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .setting-item input { width: 80px; text-align: center; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .button-group button { padding: 12px 25px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 25px; width: 100%; transition: background-color 0.3s; }
+        .button-group button:hover { background-color: #1e7e34; }
+        #message { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; }
+        .links { margin-bottom: 20px; text-align: center; }
+        .links a { margin: 0 10px; color: #007bff; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="links">
+            <a href="index.html">🔗 صفحة التسجيل</a> | 
+            <a href="admin.html">📊 التقارير</a>
+        </div>
+        <h1>⚙️ إعدادات الحد الأقصى للسعة</h1>
+        <p>الحد الأقصى الافتراضي العام هو **40** (يمكن تغييره من الكود). قم بتخصيص الأعداد لأي اختيار هنا.</p>
+
+        <div id="capacitySettings">
+            <p id="loadingSettings">جاري تحميل الإعدادات...</p>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="saveSettings()">حفظ الإعدادات</button>
+        </div>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // يجب أن تتطابق هذه الاختيارات مع المنطق في server.js
+        const ALL_SELECTIONS = [
+            { key: "Bundle1_A", name: "باندل 1 - جروب A" },
+            { key: "Bundle1_B", name: "باندل 1 - جروب B" },
+            { key: "Bundle1_C", name: "باندل 1 - جروب C" },
+            { key: "Bundle2_A", name: "باندل 2 - جروب A" },
+            { key: "Bundle2_B", name: "باندل 2 - جروب B" },
+            { key: "Bundle2_C", name: "باندل 2 - جروب C" },
+            { key: "Bundle3_A", name: "باندل 3 - جروب A" },
+            { key: "Bundle3_B", name: "باندل 3 - جروب B" },
+            { key: "Bundle3_C", name: "باندل 3 - جروب C" },
+            { key: "Bundle4_A", name: "باندل 4 - جروب A" },
+            { key: "Bundle4_B", name: "باندل 4 - جروب B" },
+            { key: "Bundle4_C", name: "باندل 4 - جروب C" }
+        ];
+        const DEFAULT_CAPACITY = 40; 
+        const settingsDiv = document.getElementById('capacitySettings');
+        const messageDiv = document.getElementById('message');
+        const loadingMessage = document.getElementById('loadingSettings');
+
+        // جلب الإعدادات الحالية
+        async function fetchSettings() {
+            loadingMessage.style.display = 'block';
+            try {
+                const response = await fetch('/api/get-settings');
+                const data = await response.json();
+                renderSettings(data.capacities || {});
+            } catch (error) {
+                loadingMessage.textContent = '❌ فشل في تحميل الإعدادات من الخادم.';
+            } finally {
+                loadingMessage.style.display = 'none';
+            }
+        }
+
+        // عرض الإعدادات في الواجهة
+        function renderSettings(currentCapacities) {
+            settingsDiv.innerHTML = '';
+            ALL_SELECTIONS.forEach(item => {
+                const currentValue = currentCapacities[item.key] || DEFAULT_CAPACITY;
+                
+                const div = document.createElement('div');
+                div.className = 'setting-item';
+                div.innerHTML = `
+                    <span>${item.name}</span>
+                    <input type="number" id="${item.key}" value="${currentValue}" min="1" oninput="this.value = Math.abs(this.value)">
+                `;
+                settingsDiv.appendChild(div);
+            });
+        }
+
+        // حفظ الإعدادات
+        async function saveSettings() {
+            const password = prompt("الرجاء إدخال كلمة مرور المدير لحفظ الإعدادات:");
+            if (!password) {
+                messageDiv.innerHTML = `<span style="color: red;">تم إلغاء العملية.</span>`;
+                return;
+            }
+
+            const capacities = {};
+            ALL_SELECTIONS.forEach(item => {
+                const inputElement = document.getElementById(item.key);
+                const value = parseInt(inputElement.value);
+                // فقط أرسل القيمة إذا كانت مختلفة عن القيمة الافتراضية
+                if (value && value > 0) { 
+                    capacities[item.key] = value;
+                }
+            });
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password, capacities })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.innerHTML = `<span style="color: green;">✅ ${data.message}</span>`;
+                } else {
+                    messageDiv.innerHTML = `<span style="color: red;">❌ ${data.message}</span>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = `<span style="color: red;">❌ خطأ في الاتصال بالخادم.</span>`;
+            }
+        }
+
+        fetchSettings();
+    </script>
+</body>
+</html>

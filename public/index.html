@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الاختيار</title>
+    <style>
+        body {
+            font-family: 'Tahoma', Arial, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="text"], input[type="password"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        select {
+            appearance: none;
+            background-color: #fff;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .counts {
+            text-align: center;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            font-size: 1.1em;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>تسجيل الاختيار</h1>
+        
+        <form id="registration-form">
+            <div class="form-group">
+                <label for="name">الاسم:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="studentId">الرقم الجامعي:</label>
+                <input type="text" id="studentId" name="studentId" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="major">اختر التخصص:</label>
+                <select id="major" name="major" required>
+                    <option value="" disabled selected>-- اختر التخصص --</option>
+                    <option value="باطنة">باطنة</option>
+                    <option value="جراحة">جراحة</option>
+                    </select>
+            </div>
+
+            <div class="form-group">
+                <label for="course">اختر المادة:</label>
+                <select id="course" name="course" required>
+                    <option value="" disabled selected>-- اختر المادة --</option>
+                    <option value="كيمياء">كيمياء</option>
+                    <option value="فيزياء">فيزياء</option>
+                    </select>
+            </div>
+
+            <div id="message" class="message" style="display:none;"></div>
+            
+            <button type="submit">إرسال الاختيار</button>
+
+            <div class="counts">
+                <p>إجمالي المسجلين: <span id="total-count">0</span></p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCounts();
+
+            // دالة جلب الأعداد (تم تعديل المسار)
+            function fetchCounts() {
+                // 💡 التعديل الحاسم: استخدام مسار /api/counts
+                fetch('/api/counts') 
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Server returned error status');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if(data.success) {
+                            document.getElementById('total-count').innerText = data.totalCount;
+                            // يمكنك إضافة تحديث لأعداد التخصصات هنا
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Fetch counts error:", error);
+                        document.getElementById('message').innerHTML = 'خطأ في الاتصال بالخادم لتحميل الأعداد.';
+                        document.getElementById('message').className = 'message error';
+                        document.getElementById('message').style.display = 'block';
+                    });
+            }
+
+            // دالة إرسال النموذج (تم تعديل المسار)
+            document.getElementById('registration-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const messageElement = document.getElementById('message');
+                messageElement.style.display = 'none';
+
+                const formData = {
+                    name: document.getElementById('name').value,
+                    studentId: document.getElementById('studentId').value,
+                    major: document.getElementById('major').value,
+                    course: document.getElementById('course').value,
+                };
+
+                // 💡 التعديل الحاسم: استخدام مسار /api/register
+                fetch('/api/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    messageElement.innerText = data.message;
+                    if (data.success) {
+                        messageElement.className = 'message success';
+                        document.getElementById('registration-form').reset();
+                        fetchCounts(); // تحديث الأعداد بعد التسجيل الناجح
+                    } else {
+                        messageElement.className = 'message error';
+                    }
+                    messageElement.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error("Registration submit error:", error);
+                    messageElement.innerText = 'حدث خطأ غير متوقع في الاتصال بالخادم.';
+                    messageElement.className = 'message error';
+                    messageElement.style.display = 'block';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
